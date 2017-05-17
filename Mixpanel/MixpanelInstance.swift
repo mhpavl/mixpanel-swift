@@ -302,9 +302,9 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate {
                                        selector: #selector(appLinksNotificationRaised(_:)),
                                        name: NSNotification.Name("com.parse.bolts.measurement_event"),
                                        object: nil)
-        #if os(iOS)
+        #if os(iOS) && DECIDE
         initializeGestureRecognizer()
-        #endif // os(iOS)
+        #endif // os(iOS) && DECIDE
         #endif // !APP_EXTENSION
     }
     #else
@@ -502,18 +502,18 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate {
         }
     }
 
-    #if !APP_EXTENSION
+    #if !APP_EXTENSION && DECIDE
     func initializeGestureRecognizer() {
         DispatchQueue.main.async {
             self.decideInstance.gestureRecognizer = UILongPressGestureRecognizer(target: self,
                                                                                  action: #selector(self.connectGestureRecognized(gesture:)))
             self.decideInstance.gestureRecognizer?.minimumPressDuration = 3
             self.decideInstance.gestureRecognizer?.cancelsTouchesInView = false
-            #if (arch(i386) || arch(x86_64)) && DECIDE
+            #if (arch(i386) || arch(x86_64))
                 self.decideInstance.gestureRecognizer?.numberOfTouchesRequired = 2
             #else
                 self.decideInstance.gestureRecognizer?.numberOfTouchesRequired = 4
-            #endif // (arch(i386) || arch(x86_64)) && DECIDE
+            #endif // (arch(i386) || arch(x86_64))
             self.decideInstance.gestureRecognizer?.isEnabled = self.enableVisualEditorForCodeless
             UIApplication.shared.keyWindow?.addGestureRecognizer(self.decideInstance.gestureRecognizer!)
         }
@@ -524,7 +524,7 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate {
             connectToWebSocket()
         }
     }
-    #endif // !APP_EXTENSION
+    #endif // !APP_EXTENSION && DECIDE
     #endif // os(iOS)
 
 }
