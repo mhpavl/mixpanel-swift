@@ -633,11 +633,11 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
                                                                                  action: #selector(self.connectGestureRecognized(gesture:)))
             self.decideInstance.gestureRecognizer?.minimumPressDuration = 3
             self.decideInstance.gestureRecognizer?.cancelsTouchesInView = false
-            #if (arch(i386) || arch(x86_64)) && DECIDE
+            #if (arch(i386) || arch(x86_64))
                 self.decideInstance.gestureRecognizer?.numberOfTouchesRequired = 2
             #else
                 self.decideInstance.gestureRecognizer?.numberOfTouchesRequired = 4
-            #endif // (arch(i386) || arch(x86_64)) && DECIDE
+            #endif // (arch(i386) || arch(x86_64))
             self.decideInstance.gestureRecognizer?.isEnabled = self.enableVisualEditorForCodeless
             MixpanelInstance.sharedUIApplication()?.keyWindow?.addGestureRecognizer(self.decideInstance.gestureRecognizer!)
         }
