@@ -571,6 +571,20 @@ class MixpanelDemoTests: MixpanelBaseTests {
                      "Tracking the same event should require a second call to timeEvent.")
     }
 
+    func testNetworkingWithStress() {
+        _ = stubTrack().andReturn(503)
+        for _ in 0..<100 {
+            mixpanel.track(event: "Track Call")
+        }
+        flushAndWaitForSerialQueue()
+        XCTAssertTrue(mixpanel.eventsQueue.count == 100, "none supposed to be flushed")
+        LSNocilla.sharedInstance().clearStubs()
+        _ = stubTrack().andReturn(200)
+        mixpanel.flushInstance.flushRequest.networkRequestsAllowedAfterTime = 0
+        flushAndWaitForSerialQueue()
+        XCTAssertTrue(mixpanel.eventsQueue.isEmpty, "supposed to all be flushed")
+    }
+
     func testTelephonyInfoInitialized() {
         XCTAssertNotNil(AutomaticProperties.telephonyInfo, "telephonyInfo wasn't initialized")
     }
