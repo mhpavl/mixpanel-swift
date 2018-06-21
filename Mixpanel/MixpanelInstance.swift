@@ -16,6 +16,10 @@ import Cocoa
 import SystemConfiguration
 #endif
 
+#if os(iOS)
+import CoreTelephony
+#endif // os(iOS
+
 /**
  *  Delegate protocol for controlling the Mixpanel API's network behavior.
  */
@@ -235,6 +239,7 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
     let readWriteLock: ReadWriteLock
     #if os(iOS)
     var reachability: SCNetworkReachability?
+    let telephonyInfo = CTTelephonyNetworkInfo()
     #endif
     #if !os(OSX)
     var taskId = UIBackgroundTaskInvalid
@@ -249,7 +254,7 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
     #endif // DECIDE
 
     #if !os(OSX)
-    init(apiToken: String?, launchOptions: [UIApplicationLaunchOptionsKey : Any]?, flushInterval: Double, name: String, optOutTrackingByDefault: Bool = false) {
+    init(apiToken: String?, launchOptions: [UIApplicationLaunchOptionsKey : Any]?, flushInterval: Double, name: String, automaticPushTracking: Bool = true, optOutTrackingByDefault: Bool = false) {
         if let apiToken = apiToken, !apiToken.isEmpty {
             self.apiToken = apiToken
         }
@@ -304,6 +309,7 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
         #if DECIDE
             if !MixpanelInstance.isiOSAppExtension() {
                 automaticEvents.delegate = self
+                automaticEvents.automaticPushTracking = automaticPushTracking
                 automaticEvents.initializeEvents()
                 decideInstance.inAppDelegate = self
                 executeCachedVariants()
@@ -577,7 +583,7 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
         if let ASIdentifierManagerClass = NSClassFromString("ASIdentifierManager") {
             let sharedManagerSelector = NSSelectorFromString("sharedManager")
             if let sharedManagerIMP = ASIdentifierManagerClass.method(for: sharedManagerSelector) {
-                typealias sharedManagerFunc = @convention(c) (AnyObject, Selector) -> AnyObject!
+                typealias sharedManagerFunc = @convention(c) (AnyObject, Selector) -> AnyObject?
                 let curriedImplementation = unsafeBitCast(sharedManagerIMP, to: sharedManagerFunc.self)
                 if let sharedManager = curriedImplementation(ASIdentifierManagerClass.self, sharedManagerSelector) {
                     let advertisingTrackingEnabledSelector = NSSelectorFromString("isAdvertisingTrackingEnabled")
@@ -616,15 +622,27 @@ open class MixpanelInstance: CustomDebugStringConvertible, FlushDelegate, AEDele
             }
         }
     }
-
+    #if os(iOS)
     @objc func setCurrentRadio() {
-        let currentRadio = AutomaticProperties.getCurrentRadio()
+        var radio = telephonyInfo.currentRadioAccessTechnology ?? "None"
+        let prefix = "CTRadioAccessTechnology"
+        if radio.hasPrefix(prefix) {
+            radio = (radio as NSString).substring(from: prefix.count)
+        }
         trackingQueue.async {
             AutomaticProperties.automaticPropertiesLock.write {
-                AutomaticProperties.properties["$radio"] = currentRadio
+                [unowned self] in
+                AutomaticProperties.properties["$radio"] = radio
+                if self.telephonyInfo.subscriberCellularProvider?.carrierName == nil {
+                    AutomaticProperties.properties["$carrier"] = ""
+                }
+                else {
+                    AutomaticProperties.properties["$carrier"] = self.telephonyInfo.subscriberCellularProvider?.carrierName
+                }
             }
         }
     }
+    #endif
 
     #if DECIDE
     func initializeGestureRecognizer() {
